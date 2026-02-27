@@ -38,6 +38,9 @@ export class RPGChatViewProvider implements vscode.WebviewViewProvider {
         case 'updateSetting': await vscode.workspace.getConfiguration('rpgbuilder').update(data.key, data.value, true); if (data.key === 'provider') await this._sendSettings(); break;
         case 'pullModel': await this._handlePullModel(data.model); break;
         case 'clearChat': this._history = []; this._view?.webview.postMessage({ type: 'clear' }); break;
+        case 'reindex':
+            vscode.commands.executeCommand('rpgbuilder.indexSource');
+            break;
       }
     });
   }
@@ -282,6 +285,7 @@ export class RPGChatViewProvider implements vscode.WebviewViewProvider {
                     <label for="unsafe-exec" style="text-transform: none; font-weight: normal;">Allow Unsafe Command Execution</label>
                 </div>
             </div>
+            <button id="index-btn" style="width: 100%; margin-top: 5px; background: var(--vscode-button-secondaryBackground);">Retrigger Engine Indexing</button>
             <button id="save-settings" style="width: 100%; margin-top: 10px; padding: 8px;">Save Settings</button>
         </div>
         <div id="status-bar">Status: Ready</div>
@@ -294,6 +298,7 @@ export class RPGChatViewProvider implements vscode.WebviewViewProvider {
           const toggle = document.getElementById('toggle-settings');
           const clear = document.getElementById('clear-btn');
           const copy = document.getElementById('copy-btn');
+          const indexBtn = document.getElementById('index-btn');
           let isS = false;
           let thinkingDiv = null;
 
@@ -304,6 +309,10 @@ export class RPGChatViewProvider implements vscode.WebviewViewProvider {
               chat.appendChild(div);
               chat.scrollTop = chat.scrollHeight;
           }
+
+          indexBtn.onclick = () => {
+              vscode.postMessage({ type: 'reindex' });
+          };
 
           copy.onclick = () => {
               const text = Array.from(document.querySelectorAll('.message')).map(m => {
