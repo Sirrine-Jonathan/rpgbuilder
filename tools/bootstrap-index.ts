@@ -1,14 +1,16 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import ollama from 'ollama';
+import { execSync } from 'child_process';
 
 /**
  * Advanced CLI Indexer for Phaser Source
  * Now with Pre-Vectorization for RAG Performance.
  */
 
-const sourcePath = 'C:/Users/jonat/human-dev/rpgbuilder/phaser/source/src';
-const outPath = 'C:/Users/jonat/human-dev/rpgbuilder/data/engine-docs.json';
+const phaserRepoPath = path.resolve(__dirname, '../phaser/source');
+const sourcePath = path.resolve(phaserRepoPath, 'src');
+const outPath = path.resolve(__dirname, '../data/engine-docs.json');
 
 function getAllFiles(dirPath: string, extensions: string[], arrayOfFiles: string[] = []): string[] {
     const files = fs.readdirSync(dirPath);
@@ -36,6 +38,13 @@ function cleanJSDoc(doc: string): string {
 }
 
 async function run() {
+    // 1. Clone Phaser if missing
+    if (!fs.existsSync(phaserRepoPath)) {
+        console.log(`[Bootstrap] Phaser source not found. Cloning into ${phaserRepoPath}...`);
+        fs.mkdirSync(path.dirname(phaserRepoPath), { recursive: true });
+        execSync(`git clone --depth 1 https://github.com/phaserjs/phaser.git "${phaserRepoPath}"`, { stdio: 'inherit' });
+    }
+
     console.log(`[Bootstrap] Indexing Phaser source...`);
     const files = getAllFiles(sourcePath, ['.js']);
     const snippets = [];
@@ -77,6 +86,9 @@ async function run() {
         }
     }
 
+    if (!fs.existsSync(path.dirname(outPath))) {
+        fs.mkdirSync(path.dirname(outPath), { recursive: true });
+    }
     fs.writeFileSync(outPath, JSON.stringify(snippets, null, 2));
     console.log(`[Bootstrap] Success! Wrote ${snippets.length} vectorized snippets to ${outPath}`);
 }

@@ -102,7 +102,8 @@
     "test:ollama": "ts-node tools/test-ollama.ts",
     "test:sniff": "ts-node tools/test-deep-sniff.ts",
     "test:live": "ts-node src/test/runTest.ts",
-    "vsix": "vsce package --allow-missing-repository"
+    "vsix": "vsce package --allow-missing-repository",
+    "bootstrap": "ts-node tools/bootstrap-index.ts"
   },
   "devDependencies": {
     "@types/chai": "^5.2.3",
