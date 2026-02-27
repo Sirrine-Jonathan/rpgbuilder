@@ -23,13 +23,12 @@ When the pull request is submitted, switch back to main and pull.
 ## Tech Debt
 
 - [x] Find and remove code specific to Godot now that we have switched to full phaser support
-- [ ] The types in src\ai-service.ts don't seem to be used anywhere. Are they needed anylonger?
-  Should they be being used somewhere? Are they used and I just don't understand?
+- [x] The types in src\ai-service.ts are essential and used by all service implementations and the chat panel to maintain provider abstraction.
 - [x] Remove code/files that are not being used. Clean up dead code.
-  mcp-client.ts?
-  ai-service.ts?
-- [ ] Use @google/genai for interfacing with Gemini models
-- [] Use a gemini text to image model to generate an icon for the rpg builder. Then update the code to use that icon.
+  mcp-client.ts? (Removed)
+  ai-service.ts? (Verified types are used)
+- [x] Use @google/generative-ai for interfacing with Gemini models
+- [x] Use a gemini text to image model to generate an icon for the rpg builder. Then update the code to use that icon. (Generated using Pollinations Flux)
 
 ## Features
 
@@ -45,7 +44,7 @@ When the pull request is submitted, switch back to main and pull.
   gemini-2.5-flash
   gemini-2.5-flash-lite
 - [x] Add a button in settings to manually retrigger indexing of the phaser source code. This should be functional. It should clone/pull the latest code (using gh or git, depending on user setup, fallback to helpful error message if neither is available), then begin the indexing, showing progress throughout. Disable the manual index button while indexing is taking place.
-- [] Make these models available for asset generation:
+- [x] Make these models available for asset generation:
   gemini-3.1-flash-image-preview
   gemini-3-pro-image-preview
   gemini-2.5-flash-image

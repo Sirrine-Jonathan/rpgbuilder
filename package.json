@@ -4,6 +4,7 @@
   "publisher": "Sirrine-Jonathan",
   "description": "AI-powered RPG development tool integrating asset generation and engine RAG.",
   "version": "0.1.14",
+  "icon": "resources/icon.png",
   "engines": {
     "vscode": "^1.108.0"
   },
