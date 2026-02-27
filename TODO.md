@@ -38,7 +38,7 @@ When the pull request is submitted, switch back to main and pull.
 - [] Add new ways to generate assets. Experiment with other pipelines/models/formats. We need to find something that works.
 - [] Add a view for users to manually alter assets.
 - [] Inline within the code, if an asset is being referenced (look for filepaths) the extension should check if the asset exists and decorate it with a checkmark and ability to quick view the asset in a popup. If the asset does not exist, it should show a quick link to generate the asset, taking the user to the new asset generation view (see first feature TODO).
-- [] Add support for these Gemini models:
+- [x] Add support for these Gemini models:
   gemini-3.1-pro-preview
   gemini-3-flash-preview
   gemini-2.5-pro

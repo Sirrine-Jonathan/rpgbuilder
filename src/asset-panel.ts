@@ -55,7 +55,21 @@ export class RPGAssetViewProvider implements vscode.WebviewViewProvider {
         const service: AIService = providerType === 'Gemini' ? this._gemini : this._ollama;
 
         try {
-            let url = '';
+            if (config.model !== 'pollinations' && providerType === 'Gemini') {
+                // Use Gemini Image Generation API (conceptual implementation)
+                const genAI = (this._gemini as any)._getClient();
+                const model = genAI.getGenerativeModel({ model: config.model });
+                const result = await model.generateContent(prompt);
+                const response = result.response;
+                // Note: Image models return data in parts, usually inlineData
+                const part = response.candidates?.[0].content.parts[0];
+                if (part?.inlineData) {
+                    this._currentAssetBuffer = Buffer.from(part.inlineData.data, 'base64');
+                    this._view.webview.postMessage({ type: 'result', image: `data:${part.inlineData.mimeType};base64,${part.inlineData.data}` });
+                    return;
+                }
+            }
+
             if (config.type === 'pixel') {
                 // We'll use our existing SVG logic for pixel-style
                 const systemPrompt = `You are an SVG artist. Generate ONLY the raw <svg>...</svg> code for: ${prompt}. viewBox="0 0 100 100", transparent bg.`;
@@ -125,6 +139,20 @@ export class RPGAssetViewProvider implements vscode.WebviewViewProvider {
                 <div id="input-ui" class="controls">
                     <div class="row">
                         <div style="flex:1">
+                            <label>MODEL</label>
+                            <select id="asset-model">
+                                <option value="pollinations">Pollinations (Free)</option>
+                                <option value="gemini-3.1-flash-image-preview">Gemini 3.1 Flash Image</option>
+                                <option value="gemini-3-pro-image-preview">Gemini 3 Pro Image</option>
+                                <option value="gemini-2.5-flash-image">Gemini 2.5 Flash Image</option>
+                                <option value="imagen-4.0-generate-001">Imagen 4.0</option>
+                                <option value="imagen-4.0-ultra-generate-001">Imagen 4.0 Ultra</option>
+                                <option value="imagen-4.0-fast-generate-001">Imagen 4.0 Fast</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div style="flex:1">
                             <label>TYPE</label>
                             <select id="asset-type">
                                 <option value="pixel">Pixel Art (SVG)</option>
@@ -177,7 +205,8 @@ export class RPGAssetViewProvider implements vscode.WebviewViewProvider {
                         prompt: prompt.value, 
                         config: { 
                             type: document.getElementById('asset-type').value,
-                            size: document.getElementById('asset-size').value
+                            size: document.getElementById('asset-size').value,
+                            model: document.getElementById('asset-model').value
                         }
                     });
                 };
