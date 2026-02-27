@@ -1,0 +1,10 @@
+node_modules/
+dist/
+out/
+.vscode-test/
+*.vsix
+.env
+phaser/source/
+data/engine-docs.json
+test_command_called.txt
+rpgbuilder-integration-test-stable/

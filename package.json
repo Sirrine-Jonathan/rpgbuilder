@@ -1,0 +1,128 @@
+{
+  "name": "rpgbuilder",
+  "displayName": "RPG Builder AI",
+  "publisher": "Sirrine-Jonathan",
+  "description": "AI-powered RPG development tool integrating asset generation and engine RAG.",
+  "version": "0.1.13",
+  "engines": {
+    "vscode": "^1.108.0"
+  },
+  "categories": [
+    "Other",
+    "Machine Learning"
+  ],
+  "activationEvents": [
+    "onView:rpgbuilder.chatView",
+    "onCommand:rpgbuilder.start",
+    "onCommand:rpgbuilder.hello",
+    "onCommand:rpgbuilder.indexSource"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "rpgbuilder-sidebar",
+          "title": "RPG Builder",
+          "icon": "$(rocket)"
+        }
+      ]
+    },
+    "views": {
+      "rpgbuilder-sidebar": [
+        {
+          "type": "webview",
+          "id": "rpgbuilder.chatView",
+          "name": "RPG Assistant"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "rpgbuilder.indexSource",
+        "title": "RPG Builder: Index Engine Source"
+      },
+      {
+        "command": "rpgbuilder.hello",
+        "title": "RPG Builder: Say Hello"
+      },
+      {
+        "command": "rpgbuilder.start",
+        "title": "RPG Builder: Open Chat"
+      },
+      {
+        "command": "rpgbuilder.setGeminiKey",
+        "title": "RPG Builder: Set Gemini API Key"
+      },
+      {
+        "command": "rpgbuilder.testPrompt",
+        "title": "RPG Builder: Internal Test Prompt"
+      }
+    ],
+    "configuration": {
+      "title": "RPG Builder AI",
+      "properties": {
+        "rpgbuilder.provider": {
+          "type": "string",
+          "enum": [
+            "Ollama",
+            "Gemini"
+          ],
+          "default": "Ollama",
+          "description": "The AI provider to use."
+        },
+        "rpgbuilder.ollamaModel": {
+          "type": "string",
+          "default": "qwen2.5-coder:7b",
+          "description": "The Ollama model for coding."
+        },
+        "rpgbuilder.geminiModel": {
+          "type": "string",
+          "default": "gemini-2.0-flash",
+          "description": "The Gemini model to use."
+        },
+        "rpgbuilder.geminiApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "Your Google AI Studio API Key."
+        },
+        "rpgbuilder.allowUnsafeExecution": {
+          "type": "boolean",
+          "default": false,
+          "description": "If enabled, the AI can execute terminal commands without asking for permission first."
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run package",
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "package": "esbuild ./src/extension.ts --bundle --outfile=dist/extension.js --external:vscode --external:sharp --format=cjs --platform=node",
+    "test:ollama": "ts-node tools/test-ollama.ts",
+    "test:sniff": "ts-node tools/test-deep-sniff.ts",
+    "test:live": "ts-node src/test/runTest.ts",
+    "vsix": "vsce package --allow-missing-repository"
+  },
+  "devDependencies": {
+    "@types/chai": "^5.2.3",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^22.0.0",
+    "@types/vscode": "^1.108.0",
+    "@vscode/test-cli": "^0.0.12",
+    "@vscode/test-electron": "^2.5.2",
+    "@vscode/vsce": "^3.2.2",
+    "chai": "^6.2.2",
+    "esbuild": "^0.20.0",
+    "mocha": "^11.7.5",
+    "ts-mock-imports": "^1.3.19",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "dotenv": "^16.4.7",
+    "jimp": "^1.6.0",
+    "ollama": "^0.6.3"
+  }
+}
