@@ -26,12 +26,13 @@ export class RPGChatViewProvider implements vscode.WebviewViewProvider {
     webviewView.webview.options = { enableScripts: true, localResourceRoots: [this._extensionUri] };
     webviewView.webview.html = this._getHtmlForWebview(webviewView.webview);
 
-    if (this._history.length > 0) {
-        webviewView.webview.postMessage({ type: 'restoreHistory', messages: this._history });
-    }
-
     webviewView.webview.onDidReceiveMessage(async (data) => {
       switch (data.type) {
+        case 'ready':
+            if (this._history.length > 0) {
+                webviewView.webview.postMessage({ type: 'restoreHistory', messages: this._history });
+            }
+            break;
         case 'askQuestion': await this._handleAskQuestion(data.value); break;
         case 'getSettings': await this._sendSettings(); break;
         case 'updateSetting': await vscode.workspace.getConfiguration('rpgbuilder').update(data.key, data.value, true); if (data.key === 'provider') await this._sendSettings(); break;
@@ -71,21 +72,20 @@ export class RPGChatViewProvider implements vscode.WebviewViewProvider {
     const config = vscode.workspace.getConfiguration('rpgbuilder');
     const service: AIService = (config.get('provider') === 'Gemini') ? this._gemini : this._ollama;
 
-    this._updateStatus(`Augmenting...`);
-    const augmentedText = await this._ragService.augmentPrompt(text);
-    
-    // Add the augmented message to history as the user's turn
-    this._addMessage('user', augmentedText, text); // Display original, store augmented
-
+    this._addMessage('user', text);
     let loopCount = 0;
-    const maxLoops = 12;
+    const maxLoops = 15;
 
     while (loopCount < maxLoops) {
         loopCount++;
-        this._updateStatus(`AI Reasoning (Step ${loopCount})...`);
+        this._updateStatus(`Reasoning Step ${loopCount}...`);
         if (this._view) this._view.webview.postMessage({ type: 'startThinking' });
 
         try {
+            this._updateStatus(`Searching Docs...`);
+            const augmentedPrompt = await this._ragService.augmentPrompt(text);
+            this._addMessage('system', `RAG Search Context Injected.`, `🔍 RAG Search Context Injected`);
+
             const systemPrompt = `You are an AUTONOMOUS SENIOR PHASER 3 DEVELOPER. 
             CORE DIRECTIVE: Build a web-based RPG using Phaser 3 and HTML5.
             RULES:
@@ -112,12 +112,16 @@ export class RPGChatViewProvider implements vscode.WebviewViewProvider {
 
             if (this._view) this._view.webview.postMessage({ type: 'stopThinking' });
 
+            let actionTaken = false;
             let toolResults = [];
 
             if (response.toolCalls) {
                 for (const tc of response.toolCalls) {
+                    this._addMessage('assistant', `Calling tool: ${tc.name}`, `🛠️ Calling tool: ${tc.name}`);
                     const result = await this._handleGenericToolCall(tc.name, tc.args, service);
+                    this._addMessage('system', `Tool ${tc.name} result: ${result}`, `⚙️ Tool ${tc.name} result: ${result}`);
                     toolResults.push(`Tool ${tc.name} execution result: ${result}`);
+                    actionTaken = true;
                 }
             }
 
@@ -125,11 +129,13 @@ export class RPGChatViewProvider implements vscode.WebviewViewProvider {
                 const isJsonOnly = response.content.trim().startsWith('[') || response.content.trim().startsWith('{');
                 if (!isJsonOnly) this._addMessage('assistant', response.content);
                 const sniffedResults = await this._deepSniff(response.content, service);
-                toolResults.push(...sniffedResults);
+                if (sniffedResults.length > 0) {
+                    toolResults.push(...sniffedResults);
+                    actionTaken = true;
+                }
             }
 
-            if (toolResults.length > 0) {
-                // AUTO-CONTINUE: Feed results back as a system observation
+            if (actionTaken) {
                 this._history.push({ role: 'user', content: `ENVIRONMENT FEEDBACK:\n${toolResults.join('\n')}\n\nPlease proceed with the next logical step of the implementation.` });
                 continue; 
             } else {
@@ -165,7 +171,9 @@ export class RPGChatViewProvider implements vscode.WebviewViewProvider {
                 const name = item.name || item.tool_name || (item.tool_code && item.tool_code.tool_name ? item.tool_code.tool_name.split('.').pop() : undefined);
                 const args = item.arguments || item.parameters || (item.tool_code ? item.tool_code.parameters : undefined) || item;
                 if (name && args) {
+                    this._addMessage('assistant', `Sniffed tool call: ${name}`, `🔍 Sniffed tool call: ${name}`);
                     const res = await this._handleGenericToolCall(name, args, service);
+                    this._addMessage('system', `Sniffed tool ${name} result: ${res}`, `⚙️ Sniffed tool ${name} result: ${res}`);
                     results.push(`Sniffed tool ${name} result: ${res}`);
                 }
             }
@@ -181,9 +189,7 @@ export class RPGChatViewProvider implements vscode.WebviewViewProvider {
           if (name === 'generate_sprite') {
               this._updateStatus('🎨 SVG Sprite...');
               const outPath = await this._spriteGen.generateSVG(args.prompt, args.filename, folder.uri.fsPath, service);
-              const msg = `🎨 Created SVG asset: assets/${path.basename(outPath)}`;
-              this._addMessage('assistant', msg);
-              return msg;
+              return `Created SVG asset: assets/${path.basename(outPath)}`;
           } 
           else if (name === 'generate_image') {
               this._updateStatus('✨ PNG Image...');
@@ -194,17 +200,18 @@ export class RPGChatViewProvider implements vscode.WebviewViewProvider {
               const out = path.join(folder.uri.fsPath, 'assets', `${base}.png`);
               if (!fs.existsSync(path.dirname(out))) fs.mkdirSync(path.dirname(out), { recursive: true });
               await vscode.workspace.fs.writeFile(vscode.Uri.file(out), new Uint8Array(buf));
-              const msg = `✨ Created PNG asset: assets/${base}.png`;
-              this._addMessage('assistant', msg);
-              return msg;
+              return `Created PNG asset: assets/${base}.png`;
           }
           else if (name === 'write_file') {
               const uri = vscode.Uri.joinPath(folder.uri, args.path);
               await vscode.workspace.fs.createDirectory(vscode.Uri.joinPath(folder.uri, path.dirname(args.path)));
               await vscode.workspace.fs.writeFile(uri, Buffer.from(args.content, 'utf8'));
-              const msg = `💾 Saved: ${args.path}`;
-              this._addMessage('assistant', msg);
-              return msg;
+              return `Saved: ${args.path}`;
+          }
+          else if (name === 'read_file') {
+              const uri = vscode.Uri.joinPath(folder.uri, args.path);
+              const data = await vscode.workspace.fs.readFile(uri);
+              return Buffer.from(data).toString('utf8');
           }
           else if (name === 'list_files') {
               const uri = vscode.Uri.joinPath(folder.uri, args.path || '.');
@@ -213,15 +220,11 @@ export class RPGChatViewProvider implements vscode.WebviewViewProvider {
           }
           else if (name === 'serve_project') {
               exec('npx serve .', { cwd: folder.uri.fsPath });
-              const msg = `🌐 Preview server started (check your browser at http://localhost:3000)`;
-              this._addMessage('assistant', msg);
-              return msg;
+              return `Preview server started (check your browser at http://localhost:3000)`;
           }
           return "Tool unknown";
       } catch (e: any) {
-          const err = `❌ Error in ${name}: ${e.message}`;
-          this._addMessage('assistant', err);
-          return err;
+          return `❌ Error in ${name}: ${e.message}`;
       }
   }
 
@@ -232,30 +235,54 @@ export class RPGChatViewProvider implements vscode.WebviewViewProvider {
         <meta charset="UTF-8">
         <style>
           body { font-family: var(--vscode-font-family); color: var(--vscode-foreground); padding: 0; margin: 0; display: flex; flex-direction: column; height: 100vh; background: var(--vscode-sideBar-background); overflow: hidden; }
-          #chat { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 12px; scroll-behavior: smooth; }
+          #chat { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 8px; scroll-behavior: smooth; }
           #settings-page { flex: 1; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 12px; }
-          .message { padding: 8px 12px; border-radius: 6px; max-width: 90%; font-size: 12px; white-space: pre-wrap; line-height: 1.4; word-wrap: break-word; }
-          pre { overflow: visible; white-space: pre-wrap; background: rgba(0,0,0,0.2); padding: 5px; border-radius: 4px; }
+          .message { padding: 8px 12px; border-radius: 6px; max-width: 90%; font-size: 12px; white-space: pre-wrap; line-height: 1.4; word-wrap: break-word; position: relative; }
+          pre { overflow: visible; white-space: pre-wrap; background: rgba(0,0,0,0.2); padding: 5px; border-radius: 4px; margin: 5px 0; }
           .user { background: var(--vscode-button-background); color: var(--vscode-button-foreground); align-self: flex-end; border-bottom-right-radius: 2px; }
           .assistant { background: var(--vscode-editor-background); border: 1px solid var(--vscode-panel-border); align-self: flex-start; border-bottom-left-radius: 2px; }
+          .system { background: rgba(255,255,255,0.05); border: 1px dashed var(--vscode-panel-border); align-self: center; font-style: italic; font-size: 11px; opacity: 0.8; max-width: 95%; }
           #header { display: flex; justify-content: space-between; align-items: center; padding: 5px 10px; border-bottom: 1px solid var(--vscode-panel-border); background: var(--vscode-editor-background); flex-shrink: 0; }
           #status-bar { font-size: 10px; padding: 4px 10px; color: var(--vscode-descriptionForeground); border-top: 1px solid var(--vscode-panel-border); background: var(--vscode-editor-background); flex-shrink: 0; }
           #input-container { padding: 10px; display: flex; flex-direction: column; gap: 5px; flex-shrink: 0; border-top: 1px solid var(--vscode-panel-border); }
           textarea { background: var(--vscode-input-background); color: var(--vscode-input-foreground); border: 1px solid var(--vscode-input-border); padding: 8px; border-radius: 4px; resize: none; height: 60px; font-family: inherit; font-size: inherit; outline: none; }
           .hidden { display: none !important; }
           button { background: var(--vscode-button-background); color: var(--vscode-button-foreground); border: none; padding: 5px 10px; cursor: pointer; border-radius: 4px; font-size: 11px; }
-          .thinking { font-style: italic; opacity: 0.7; font-size: 11px; margin-bottom: 10px; }
+          .thinking { font-style: italic; opacity: 0.7; font-size: 11px; margin-bottom: 10px; align-self: flex-start; }
+          
+          /* Settings UI Improvements */
+          .settings-group { display: flex; flex-direction: column; gap: 10px; padding: 5px 0; }
+          .settings-row { display: flex; align-items: center; gap: 10px; }
+          .settings-row input[type="checkbox"] { width: auto; margin: 0; }
+          label { font-size: 10px; font-weight: bold; opacity: 0.8; text-transform: uppercase; }
+          select, input[type="password"], input[type="text"] { width: 100%; box-sizing: border-box; }
         </style>
       </head>
       <body>
         <div id="header"><span style="font-size: 10px; font-weight: bold;">RPG BUILDER</span><div style="display:flex; gap: 5px;"><button id="copy-btn">Copy</button><button id="clear-btn">Clear</button><button id="toggle-settings">Settings</button></div></div>
         <div id="chat"></div>
         <div id="settings-page" class="hidden">
-            <label style="font-size: 10px;">PROVIDER</label><select id="provider-select"><option value="Ollama">Ollama</option><option value="Gemini">Gemini</option></select>
-            <div id="ollama-settings"><label style="font-size: 10px; margin-top: 10px;">MODEL</label><select id="ollama-select"></select></div>
-            <div id="gemini-settings" class="hidden"><label style="font-size: 10px; margin-top: 10px;">MODEL</label><select id="gemini-select"></select><label style="font-size: 10px; margin-top: 10px;">KEY</label><input type="password" id="gemini-key" /></div>
-            <div style="margin-top: 10px;"><input type="checkbox" id="unsafe-exec" /> <label for="unsafe-exec" style="display:inline; font-size: 10px;">Allow Unsafe Command Execution</label></div>
-            <button id="save-settings" style="width: 100%; margin-top: 10px;">Save Settings</button>
+            <div class="settings-group">
+                <label>AI Provider</label>
+                <select id="provider-select"><option value="Ollama">Ollama</option><option value="Gemini">Gemini</option></select>
+            </div>
+            <div id="ollama-settings" class="settings-group">
+                <label>Ollama Model</label>
+                <select id="ollama-select"></select>
+            </div>
+            <div id="gemini-settings" class="settings-group hidden">
+                <label>Gemini Model</label>
+                <select id="gemini-select"></select>
+                <label>API Key</label>
+                <input type="password" id="gemini-key" placeholder="Enter API Key" />
+            </div>
+            <div class="settings-group">
+                <div class="settings-row">
+                    <input type="checkbox" id="unsafe-exec" />
+                    <label for="unsafe-exec" style="text-transform: none; font-weight: normal;">Allow Unsafe Command Execution</label>
+                </div>
+            </div>
+            <button id="save-settings" style="width: 100%; margin-top: 10px; padding: 8px;">Save Settings</button>
         </div>
         <div id="status-bar">Status: Ready</div>
         <div id="input-container"><textarea id="prompt" placeholder="Ask RPG Builder... (Shift+Enter for new line)"></textarea></div>
@@ -279,7 +306,12 @@ export class RPGChatViewProvider implements vscode.WebviewViewProvider {
           }
 
           copy.onclick = () => {
-              const text = Array.from(document.querySelectorAll('.message')).map(m => (m.classList.contains('user') ? 'USER: ' : 'AI: ') + m.innerText).join('\\n\\n');
+              const text = Array.from(document.querySelectorAll('.message')).map(m => {
+                  let role = 'AI';
+                  if (m.classList.contains('user')) role = 'USER';
+                  if (m.classList.contains('system')) role = 'SYSTEM';
+                  return role + ': ' + m.innerText;
+              }).join('\\n\\n');
               navigator.clipboard.writeText(text);
               const old = copy.innerText; copy.innerText = 'Copied!'; setTimeout(() => copy.innerText = old, 2000);
           };
@@ -293,6 +325,7 @@ export class RPGChatViewProvider implements vscode.WebviewViewProvider {
               vscode.postMessage({ type: 'updateSetting', key: 'geminiModel', value: document.getElementById('gemini-select').value });
               vscode.postMessage({ type: 'updateSetting', key: 'geminiApiKey', value: document.getElementById('gemini-key').value });
               vscode.postMessage({ type: 'updateSetting', key: 'allowUnsafeExecution', value: document.getElementById('unsafe-exec').checked });
+              vscode.window?.showInformationMessage('Settings saved');
           };
 
           window.addEventListener('message', e => {
@@ -322,6 +355,9 @@ export class RPGChatViewProvider implements vscode.WebviewViewProvider {
               if (prompt.value) { vscode.postMessage({ type: 'askQuestion', value: prompt.value }); prompt.value = ''; }
             }
           });
+
+          // Signal ready
+          vscode.postMessage({ type: 'ready' });
         </script>
       </body>
       </html>`;

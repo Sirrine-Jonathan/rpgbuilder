@@ -15,20 +15,21 @@ When the pull request is submitted, switch back to main and pull.
 
 ## Defects
 
-- [] Chat history is not persisting when the user navigates away from the chat panel.
-- [] The llm doesn't seem to be sent the the tool results. Let's start fixing this by adding more overall transparency to the chat messages. There should ALWAYS show a 'thinking...' or 'loading...' (whatever is already in place) indicator ANYTIME the llm is being invoked within the chat. It is assumed that each invocation includes the entire chat history. All interactions are shown in the chat including tool uses by the LLM (its own dedicated bubble), tool responses (their own specific styled bubble), anything the llm says, anything the llm thinks (if thinking is on), and anything the user says. Full transparency of conversation. Also, if there are specific RAG lookups happening, those should be displayed in chat as well... not sure how that works.
-- [] PNGs are not being generated correctly.
-- [] On the settings page, the UI could use some better styling. The inputs look unstyled and many elements do not have space between them and adjacent elements. Make the 'Allow Unsafe Command Execution' checkbox centered vertically next to its label.
+- [x] Chat history is not persisting when the user navigates away from the chat panel.
+- [x] The llm doesn't seem to be sent the the tool results. Let's start fixing this by adding more overall transparency to the chat messages. There should ALWAYS show a 'thinking...' or 'loading...' (whatever is already in place) indicator ANYTIME the llm is being invoked within the chat. It is assumed that each invocation includes the entire chat history. All interactions are shown in the chat including tool uses by the LLM (its own dedicated bubble), tool responses (their own specific styled bubble), anything the llm says, anything the llm thinks (if thinking is on), and anything the user says. Full transparency of conversation. Also, if there are specific RAG lookups happening, those should be displayed in chat as well... not sure how that works.
+- [x] PNGs are not being generated correctly.
+- [x] On the settings page, the UI could use some better styling. The inputs look unstyled and many elements do not have space between them and adjacent elements. Make the 'Allow Unsafe Command Execution' checkbox centered vertically next to its label.
 
 ## Tech Debt
 
-- [] Find and remove code specific to Godot now that we have switched to full phaser support
-- [] The types in src\ai-service.ts don't seem to be used anywhere. Are they needed anylonger?
+- [x] Find and remove code specific to Godot now that we have switched to full phaser support
+- [ ] The types in src\ai-service.ts don't seem to be used anywhere. Are they needed anylonger?
   Should they be being used somewhere? Are they used and I just don't understand?
-- [] Remove code/files that are not being used. Clean up dead code.
+- [x] Remove code/files that are not being used. Clean up dead code.
   mcp-client.ts?
   ai-service.ts?
-- [] Use @google/genai for interfacing with Gemini models
+- [ ] Use @google/genai for interfacing with Gemini models
+- [] Use a gemini text to image model to generate an icon for the rpg builder. Then update the code to use that icon.
 
 ## Features
 
