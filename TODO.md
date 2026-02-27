@@ -44,7 +44,7 @@ When the pull request is submitted, switch back to main and pull.
   gemini-2.5-pro
   gemini-2.5-flash
   gemini-2.5-flash-lite
-- [] Add a button in settings to manually retrigger indexing of the phaser source code. This should be functional. It should clone/pull the latest code (using gh or git, depending on user setup, fallback to helpful error message if neither is available), then begin the indexing, showing progress throughout. Disable the manual index button while indexing is taking place.
+- [x] Add a button in settings to manually retrigger indexing of the phaser source code. This should be functional. It should clone/pull the latest code (using gh or git, depending on user setup, fallback to helpful error message if neither is available), then begin the indexing, showing progress throughout. Disable the manual index button while indexing is taking place.
 - [] Make these models available for asset generation:
   gemini-3.1-flash-image-preview
   gemini-3-pro-image-preview
