@@ -3,7 +3,7 @@
   "displayName": "RPG Builder AI",
   "publisher": "Sirrine-Jonathan",
   "description": "AI-powered RPG development tool integrating asset generation and engine RAG.",
-  "version": "0.1.13",
+  "version": "0.1.14",
   "engines": {
     "vscode": "^1.108.0"
   },
@@ -13,6 +13,7 @@
   ],
   "activationEvents": [
     "onView:rpgbuilder.chatView",
+    "onView:rpgbuilder.assetView",
     "onCommand:rpgbuilder.start",
     "onCommand:rpgbuilder.hello",
     "onCommand:rpgbuilder.indexSource"
@@ -34,6 +35,11 @@
           "type": "webview",
           "id": "rpgbuilder.chatView",
           "name": "RPG Assistant"
+        },
+        {
+          "type": "webview",
+          "id": "rpgbuilder.assetView",
+          "name": "Asset Generator"
         }
       ]
     },

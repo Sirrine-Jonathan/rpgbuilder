@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { RPGChatViewProvider } from './chat-panel';
+import { RPGAssetViewProvider } from './asset-panel';
 import { RPGRagService } from './rag-client';
 import { ProjectIndexer } from './project-indexer';
 
@@ -9,10 +10,15 @@ export function activate(context: vscode.ExtensionContext) {
     
     const ragService = new RPGRagService();
     const indexer = new ProjectIndexer();
-    const provider = new RPGChatViewProvider(context.extensionUri, ragService);
+    const chatProvider = new RPGChatViewProvider(context.extensionUri, ragService);
+    const assetProvider = new RPGAssetViewProvider(context.extensionUri);
 
     context.subscriptions.push(
-      vscode.window.registerWebviewViewProvider(RPGChatViewProvider.viewType, provider)
+      vscode.window.registerWebviewViewProvider(RPGChatViewProvider.viewType, chatProvider)
+    );
+
+    context.subscriptions.push(
+      vscode.window.registerWebviewViewProvider(RPGAssetViewProvider.viewType, assetProvider)
     );
 
     context.subscriptions.push(
@@ -59,7 +65,7 @@ export function activate(context: vscode.ExtensionContext) {
               const uri = vscode.Uri.joinPath(wf.uri, 'test_command_called.txt');
               await vscode.workspace.fs.writeFile(uri, Buffer.from('CALLED', 'utf8'));
           }
-          await (provider as any)._handleAskQuestion(prompt);
+          await (chatProvider as any)._handleAskQuestion(prompt);
       })
     );
 
