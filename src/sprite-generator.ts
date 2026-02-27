@@ -4,7 +4,7 @@ import { AIService } from './ai-service';
 
 export class SpriteGenerator {
   /**
-   * Generates a native SVG asset using the LLM. Godot 4 supports SVGs natively!
+   * Generates a native SVG asset using the LLM. Phaser 3 supports SVGs!
    */
   async generateSVG(prompt: string, filename: string, workspacePath: string, service: AIService): Promise<string> {
     console.log(`[Tool] Generating native SVG asset: ${prompt}`);
